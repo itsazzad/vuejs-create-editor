@@ -1,23 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html xmlns:v-on="http://www.w3.org/1999/xhtml">
 <head>
     <title>Canvas</title>
     <link rel="stylesheet" type="text/css" href="bootstrap.css">
     <link rel="stylesheet" type="text/css" href="main.css">
+    <style type="text/css">
+        .canvas-element{
+            position: absolute;
+        }
+        p{
+            margin: 0;
+            padding: 0;
+        }
+    </style>
     <script type="text/javascript" src="https://unpkg.com/vue@latest/dist/vue.js"></script>
     <script type="text/javascript">
+        function uid() {
+            return 'element:' + (+new Date()) + '-' + Math.random()
+                .toString(36)
+                .substring(2);
+        }
+
+        Vue.component('canvas-element', {
+            props: ['element'],
+            template: `
+                <div v-bind:class="[ 'canvas-element', element.text ? 'text' : 'image' ]" v-bind:style="{ zIndex: element.zIndex }">
+                    <p v-if="element.text">{{ element.text }}</p>
+                    <img v-else-if="element.src" :src="element.src" />
+                </div>
+`
+        });
+
         window.onload = function () {
             new Vue({
                 el: '#root',
                 data: {
-                    images: []
+                    images: [],
+                    //Starting canvas elements' z-index from 1000
+                    topMostZIndex: 999, //Making the selected element topmost
+                    canvasElements: {},
                 },
                 created: function () {
-                    this.getImages()
+                    this.getImages();
+                    this.getCanvasElements();
                 },
-                watch: {
-                    // images: 'getImages'
-                },
+                watch: {},
                 filters: {},
                 methods: {
                     getImages: function () {
@@ -52,10 +79,37 @@
                             }
                         };
                         xhr.send(data)
-                    }
+                    },
+                    getCanvasElements: function () {
+                        this.topMostZIndex = localStorage.getItem('topMostZIndex');
+                        this.canvasElements = Object.keys(localStorage)
+                            .reduce((obj, k) => {
+                                if (!k.startsWith('element:')) return obj; // Matching the key signature
+                                return {...obj, [k]: JSON.parse(localStorage.getItem(k))}
+                            }, {
+                                'element:time1-uid1': {
+                                    uid: 'element:time1-uid1',
+                                    position: {
+                                        left: 0,
+                                        top: 0,
+                                    },
+                                    zIndex: 1000,
+                                    text: 'Hello World',
+                                },
+                                'element:time2-uid2': {
+                                    uid: 'element:time2-uid2',
+                                    position: {
+                                        left: 0,
+                                        top: 0,
+                                    },
+                                    zIndex: 1001,
+                                    src: 'http://localhost:8000/images/uploads-1462948453043.png',
+                                },
+                            });
+                    },
                 }
             })
-        }
+        };
     </script>
 </head>
 <body>
@@ -63,10 +117,10 @@
     <!-- side pane -->
     <div class="sidepane col-sm-2 col-md-2 col-lg-2">
         <div class="form">
+            <!-- Upload Form here -->
             <h3>Form</h3>
             <input type="file" class="form-control" placeholder="Upload Your Images" name="upload">
             <button id="submit" class="btn btn-default" v-on:click="postUploads">upload</button>
-            <!-- Upload Form here -->
         </div>
         <hr/>
         <div class="assets">
@@ -88,6 +142,11 @@
     <div class="canvas col-sm-8 col-md-8 col-lg-8">
         <div class="block">
             <!-- Add images and texts to here -->
+            <canvas-element
+                    v-for="element in canvasElements"
+                    v-bind:key="element.uid"
+                    v-bind:element="element"
+            ></canvas-element>
         </div>
     </div>
 </div>
