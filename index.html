@@ -7,30 +7,51 @@
     <script type="text/javascript" src="https://unpkg.com/vue@latest/dist/vue.js"></script>
     <script type="text/javascript">
         window.onload = function () {
-            const apiImages = '/images'
-
             new Vue({
                 el: '#root',
                 data: {
                     images: []
                 },
                 created: function () {
-                    this.fetchImages()
+                    this.getImages()
                 },
                 watch: {
-                    images: 'fetchImages'
+                    // images: 'getImages'
                 },
-                filters: {
-                },
+                filters: {},
                 methods: {
-                    fetchImages: function () {
-                        const xhr = new XMLHttpRequest()
-                        const self = this
-                        xhr.open('GET', apiImages)
+                    getImages: function () {
+                        const xhr = new XMLHttpRequest();
+                        const self = this;
+                        xhr.open('GET', '/images');
                         xhr.onload = function () {
-                            self.images = JSON.parse(xhr.response)
-                        }
+                            if (xhr.response) {
+                                self.images = JSON.parse(xhr.response)
+                            }
+                        };
                         xhr.send()
+                    },
+                    postUploads: function (event) {
+                        const input = document.querySelector('.form input[type=file]'),
+                            file = input.files[0];
+
+                        if (!file || !file.type.match(/image.*/)) return;
+
+                        const data = new FormData();
+                        data.append('upload', file);
+
+                        const xhr = new XMLHttpRequest();
+                        const self = this;
+                        xhr.open('POST', '/uploads');
+                        xhr.onloadend = function () {
+                            if (xhr.response) {
+                                const uploads = JSON.parse(xhr.response);
+                                if (uploads) {
+                                    self.images.push(uploads.file)
+                                }
+                            }
+                        };
+                        xhr.send(data)
                     }
                 }
             })
@@ -38,37 +59,37 @@
     </script>
 </head>
 <body>
-    <div id="root">
-        <!-- side pane -->
-        <div class="sidepane col-sm-2 col-md-2 col-lg-2">
-            <div class="form">
-                <h3>Form</h3>
-                <input type="file" class="form-control" placeholder="Upload Your Images" name="upload">
-                <button id="submit" class="btn btn-default">upload</button>
-                <!-- Upload Form here -->
-            </div>
-            <hr/>
-            <div class="assets">
-                <h3>Assets</h3>
-                <div class="text">
-                    <h4>Text</h4>
-                    <button id="addText" class="btn btn-default">Add Text</button>
-                </div>
-                <div class="image">
-                    <h4>Images</h4>
-                    <ul class="list-unstyled">
-                        <!-- List of images here -->
-                        <li v-for="record in images"><img :src="record" class="img-rounded"/></li>
-                    </ul>
-                </div>
-            </div>
+<div id="root">
+    <!-- side pane -->
+    <div class="sidepane col-sm-2 col-md-2 col-lg-2">
+        <div class="form">
+            <h3>Form</h3>
+            <input type="file" class="form-control" placeholder="Upload Your Images" name="upload">
+            <button id="submit" class="btn btn-default" v-on:click="postUploads">upload</button>
+            <!-- Upload Form here -->
         </div>
-        <!-- canvas -->
-        <div class="canvas col-sm-8 col-md-8 col-lg-8">
-            <div class="block">
-                <!-- Add images and texts to here -->
+        <hr/>
+        <div class="assets">
+            <h3>Assets</h3>
+            <div class="text">
+                <h4>Text</h4>
+                <button id="addText" class="btn btn-default">Add Text</button>
+            </div>
+            <div class="image">
+                <h4>Images</h4>
+                <ul class="list-unstyled">
+                    <!-- List of images here -->
+                    <li v-for="image in images"><img :src="image" class="img-rounded"/></li>
+                </ul>
             </div>
         </div>
     </div>
+    <!-- canvas -->
+    <div class="canvas col-sm-8 col-md-8 col-lg-8">
+        <div class="block">
+            <!-- Add images and texts to here -->
+        </div>
+    </div>
+</div>
 </body>
 </html>
