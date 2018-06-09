@@ -35,6 +35,7 @@
                 .substring(2);
         }
 
+        //Simple State Management
         const store = {
             debug: true,
             state: {
@@ -43,9 +44,9 @@
                     uid: null,
                     zIndex: 999,
                 },
-                canvasElements: [],
+                canvasElements: [], // Saving all canvas elements' properties
             },
-            setUpperMostElement(newValue, persist) {
+            setUpperMostElement(newValue, persist) { // Saving the info of the upper most canvas element
                 if (this.debug) {
                     console.log('setUpperMostElement:', 'before update:', JSON.stringify(this.state.upperMostElement));
                     console.log('setUpperMostElement:', 'triggered with:', JSON.stringify(newValue));
@@ -58,19 +59,19 @@
                     console.log('setUpperMostElement:', 'after update:', JSON.stringify(this.state.upperMostElement));
                 }
             },
-            setCanvasElements(newValue) {
+            setCanvasElementsFromLocalStorage(newValue) { // Repopulating the canvas elements from local storage
                 if (this.debug) {
-                    console.log('setCanvasElements:', 'before update:', JSON.stringify(this.state.canvasElements));
-                    console.log('setCanvasElements:', 'triggered with:', JSON.stringify(newValue));
+                    console.log('setCanvasElementsFromLocalStorage:', 'before update:', JSON.stringify(this.state.canvasElements));
+                    console.log('setCanvasElementsFromLocalStorage:', 'triggered with:', JSON.stringify(newValue));
                 }
                 if ((typeof newValue === "object") && (newValue !== null)) {
                     this.state.canvasElements = newValue;
                 }
                 if (this.debug) {
-                    console.log('setCanvasElements:', 'after update:', JSON.stringify(this.state.canvasElements));
+                    console.log('setCanvasElementsFromLocalStorage:', 'after update:', JSON.stringify(this.state.canvasElements));
                 }
             },
-            addCanvasElement(newValue) {
+            addCanvasElement(newValue) { // Adding canvas element(image/text)
                 if (this.debug) {
                     console.log('addCanvasElement:', 'before update:', JSON.stringify(this.state.canvasElements));
                     console.log('addCanvasElement:', 'triggered with:', JSON.stringify(newValue));
@@ -83,7 +84,7 @@
                     console.log('addCanvasElement:', 'after update:', JSON.stringify(this.state.canvasElements));
                 }
             },
-            updateCanvasElement(key, newValue) {
+            updateCanvasElement(key, newValue) { // Updating element properties
                 if (this.debug)
                     console.log('updateCanvasElement:', 'triggered with:', JSON.stringify(key), JSON.stringify(newValue));
                 if ((typeof newValue === "object") && (newValue !== null)) {
@@ -102,7 +103,7 @@
                         console.log('updateCanvasElement:', 'after update:', JSON.stringify(this.state.canvasElements[indexOfItem]));
                 }
             },
-            deleteCanvasElement(key) {
+            deleteCanvasElement(key) { // Delete element
                 if (this.debug) {
                     console.log('deleteCanvasElement:', 'before update:', JSON.stringify(this.state.canvasElements[key]));
                     console.log('deleteCanvasElement:', 'triggered with:', JSON.stringify(key));
@@ -116,6 +117,7 @@
             },
         };
 
+        // Canvas element
         Vue.component('canvas-element', {
             props: [
                 'element',
@@ -128,12 +130,12 @@
                 },
             },
             methods: {
-                eventStopPropagationPreventDefault: function (e) {
+                eventStopPropagationPreventDefault: function (e) { // For suppressing the mousedown event of the parent
                 },
-                deleteElement: function (e) {
+                deleteElement: function (e) { // Delete
                     store.deleteCanvasElement(e.currentTarget.parentElement.id);
                 },
-                bringElementToFront: function (e) {
+                bringElementToFront: function (e) { // Bring any element to front from back on click
                     const element = store.state.canvasElements[e.currentTarget.id];
                     const upperMostElement = store.state.upperMostElement;
                     if (upperMostElement.uid === e.currentTarget.id) return;
@@ -145,7 +147,7 @@
                         zIndex: upperMostElement.zIndex + 1,
                     })
                 },
-                dragStart: function (e) {
+                dragStart: function (e) { // Mouse down means start
                     this.dragging = true;
 
                     this.position = {
@@ -153,8 +155,8 @@
                         y: e.clientY,
                     };
                 },
-                dragContinue: function (e) {
-                    if (this.dragging) {
+                dragContinue: function (e) { // Mouse move means continue
+                    if (this.dragging) { // Only when dragging started
                         store.updateCanvasElement(e.currentTarget.id, {
                             position: {
                                 top: e.currentTarget.offsetTop - (this.position.y - e.clientY),
@@ -167,7 +169,7 @@
                         };
                     }
                 },
-                dragEnd: function (e) {
+                dragEnd: function (e) { // Mouse up means done
                     this.dragging = false;
                 },
             },
@@ -203,11 +205,11 @@
                     sharedState: store.state,
                 },
                 created: function () {
-                    this.getImages();
-                    this.getCanvasElementsFromLocalStorage();
+                    this.getImages(); // Fetching uploaded images from server
+                    this.getCanvasElementsFromLocalStorage(); // Populating last state of the canvas
                 },
                 methods: {
-                    getImages: function () {
+                    getImages: function () { // Fetching uploaded images from server
                         const xhr = new XMLHttpRequest();
                         const self = this;
                         xhr.open('GET', '/images');
@@ -218,7 +220,7 @@
                         };
                         xhr.send();
                     },
-                    postUploads: function (event) {
+                    postUploads: function (event) { // Uploading new image
                         const input = document.querySelector('.form input[type=file]'),
                             file = input.files[0];
 
@@ -240,7 +242,7 @@
                         };
                         xhr.send(data);
                     },
-                    getCanvasElementsFromLocalStorage: function () {
+                    getCanvasElementsFromLocalStorage: function () { // Repopulating
                         store.setUpperMostElement(JSON.parse(localStorage.getItem('upperMostElement')));
                         const canvasElements = Object.keys(localStorage)
                             .reduce((arr, k) => {
@@ -248,9 +250,9 @@
                                 arr.splice(0, 0, JSON.parse(localStorage.getItem(k)));
                                 return arr;
                             }, []);
-                        store.setCanvasElements(canvasElements);
+                        store.setCanvasElementsFromLocalStorage(canvasElements);
                     },
-                    plotOnTheCanvas: function (data) {
+                    plotOnTheCanvas: function (data) { // Plotting the elements on the canvas
                         const upperMostElement = store.state.upperMostElement;
                         const newZIndex = upperMostElement.zIndex + 1;
                         const uid = generateUID();
@@ -270,12 +272,12 @@
                             zIndex: newZIndex,
                         }, true);
                     },
-                    plotTextOnTheCanvas: function () {
+                    plotTextOnTheCanvas: function () { // Plotting the text elements on the canvas
                         const canvasText = document.getElementById('canvas-text');
                         this.plotOnTheCanvas({text: canvasText.value});
                         canvasText.value = 'Hello World!';
                     },
-                    plotImageOnTheCanvas: function (e) {
+                    plotImageOnTheCanvas: function (e) { // Plotting the image elements on the canvas
                         this.plotOnTheCanvas({src: e.target.src})
                     },
                 }
