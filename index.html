@@ -5,15 +5,18 @@
     <link rel="stylesheet" type="text/css" href="bootstrap.css">
     <link rel="stylesheet" type="text/css" href="main.css">
     <style type="text/css">
-        .canvas-element{
+        .canvas-element {
             position: absolute;
         }
-        p{
+
+        .canvas-element img,
+        .canvas-element p {
             margin: 0;
             padding: 0;
+            cursor: move;
         }
     </style>
-    <script type="text/javascript" src="https://unpkg.com/vue@latest/dist/vue.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/vue@latest/dist/vue.min.js"></script>
     <script type="text/javascript">
         function uid() {
             return 'element:' + (+new Date()) + '-' + Math.random()
@@ -21,10 +24,87 @@
                 .substring(2);
         }
 
+        const store = {
+            debug: true,
+            state: {
+                //Starting canvas elements' z-index from 1000
+                topMostElement: {
+                    uid: null,
+                    zIndex: 999,
+                },
+                canvasElements: {},
+            },
+            setTopMostElement(newValue) {
+                if (this.debug) {
+                    console.log('setTopMostElement:', 'before update:', this.state.topMostElement);
+                    console.log('setTopMostElement:', 'triggered with:', newValue);
+                }
+                if (Number.isInteger(newValue)) {
+                    this.state.topMostElement = newValue;
+                }
+                if (this.debug) {
+                    console.log('setTopMostElement:', 'after update:', this.state.topMostElement);
+                }
+            },
+            setCanvasElements(newValue) {
+                if (this.debug) {
+                    console.log('canvasElements:', 'before update:', this.state.canvasElements);
+                    console.log('canvasElements:', 'triggered with:', newValue);
+                }
+                if ((typeof newValue === "object") && (newValue !== null)) {
+                    this.state.canvasElements = newValue;
+                }
+                if (this.debug) {
+                    console.log('canvasElements:', 'after update:', this.state.canvasElements);
+                }
+            },
+            updateCanvasElement(uid, newValue) {
+                if (this.debug) {
+                    console.log('canvasElements[uid]:', 'before update:', this.state.canvasElements[uid]);
+                    console.log('canvasElements[uid]:', 'triggered with:', uid, newValue);
+                }
+                if ((typeof newValue === "object") && (newValue !== null)) {
+                    for (let key in newValue) {
+                        if (!newValue.hasOwnProperty(key)) continue;
+                        console.error(this.state.canvasElements[uid][key], newValue[key])
+                        this.state.canvasElements[uid][key] = newValue[key];
+                    }
+                }
+                if (this.debug) {
+                    console.log('canvasElements[uid]:', 'after update:', this.state.canvasElements[uid]);
+                }
+            },
+        };
+
         Vue.component('canvas-element', {
             props: ['element'],
+            methods: {
+                bringElementToFront: function (e) {
+                    console.error(e.currentTarget.id); //anchor, span
+                    e.preventDefault();
+                    const element = store.state.canvasElements[e.currentTarget.id];
+                    const topMostElement = store.state.topMostElement;
+                    if (topMostElement.uid === e.currentTarget.id) return;
+                    store.setTopMostElement({
+                        uid: e.currentTarget.id,
+                        zIndex: topMostElement.zIndex + 1,
+                    });
+                    store.updateCanvasElement(e.currentTarget.id, {
+                        uid: e.currentTarget.id,
+                        zIndex: topMostElement.zIndex + 1,
+                    })
+                },
+                dragMouseDown: function (e) {
+                },
+
+            },
             template: `
-                <div v-bind:class="[ 'canvas-element', element.text ? 'text' : 'image' ]" v-bind:style="{ zIndex: element.zIndex }">
+                <div
+                :id="element.uid"
+                v-on:click="bringElementToFront"
+                v-on:mousedown="dragMouseDown"
+                v-bind:class="[ 'canvas-element', element.text ? 'text' : 'image' ]"
+                v-bind:style="{ zIndex: element.zIndex, top: element.position.top + 'px', left: element.position.left + 'px' }">
                     <p v-if="element.text">{{ element.text }}</p>
                     <img v-else-if="element.src" :src="element.src" />
                 </div>
@@ -36,15 +116,18 @@
                 el: '#root',
                 data: {
                     images: [],
-                    //Starting canvas elements' z-index from 1000
-                    topMostZIndex: 999, //Making the selected element topmost
-                    canvasElements: {},
+                    sharedState: store.state,
                 },
                 created: function () {
                     this.getImages();
                     this.getCanvasElements();
                 },
-                watch: {},
+                watch: {
+                    sharedState: function (val, val2) {
+                        console.error(111, val, val2)
+                    },
+                    deep: true,
+                },
                 filters: {},
                 methods: {
                     getImages: function () {
@@ -56,7 +139,7 @@
                                 self.images = JSON.parse(xhr.response)
                             }
                         };
-                        xhr.send()
+                        xhr.send();
                     },
                     postUploads: function (event) {
                         const input = document.querySelector('.form input[type=file]'),
@@ -78,11 +161,11 @@
                                 }
                             }
                         };
-                        xhr.send(data)
+                        xhr.send(data);
                     },
                     getCanvasElements: function () {
-                        this.topMostZIndex = localStorage.getItem('topMostZIndex');
-                        this.canvasElements = Object.keys(localStorage)
+                        store.setTopMostElement(JSON.parse(localStorage.getItem('topMostElement')));
+                        const canvasElements = Object.keys(localStorage)
                             .reduce((obj, k) => {
                                 if (!k.startsWith('element:')) return obj; // Matching the key signature
                                 return {...obj, [k]: JSON.parse(localStorage.getItem(k))}
@@ -90,7 +173,7 @@
                                 'element:time1-uid1': {
                                     uid: 'element:time1-uid1',
                                     position: {
-                                        left: 0,
+                                        left: 100,
                                         top: 0,
                                     },
                                     zIndex: 1000,
@@ -100,12 +183,13 @@
                                     uid: 'element:time2-uid2',
                                     position: {
                                         left: 0,
-                                        top: 0,
+                                        top: 100,
                                     },
                                     zIndex: 1001,
                                     src: 'http://localhost:8000/images/uploads-1462948453043.png',
                                 },
                             });
+                        store.setCanvasElements(canvasElements);
                     },
                 }
             })
@@ -143,7 +227,7 @@
         <div class="block">
             <!-- Add images and texts to here -->
             <canvas-element
-                    v-for="element in canvasElements"
+                    v-for="element in sharedState.canvasElements"
                     v-bind:key="element.uid"
                     v-bind:element="element"
             ></canvas-element>

@@ -1,7 +1,3 @@
-## Instructions
-
-You are required to implement a single page application that allows user to add text and image into canvas.
-
 ## Features
 
 Below are the basic features for the application:
@@ -12,50 +8,6 @@ Below are the basic features for the application:
 - user can *move and delete the image / text* inside the canvas
 - the created objects on canvas can be saved and repopulated on refresh browser
 
-You may refer to Piktochart Editor page of how this test should look like.
-
-## Resources
-
-You will be given a HTML and CSS file with simple structure, and a server that allows you to upload and retrieve image. Instruction on how to run the server is included below.
-
-## Requirements
-
-Here are the expected requirements:
-
-- App should have the features listed [above](#features)
-
-- App should work on modern browsers (Chrome / Firefox)
-
-- App logic and data flow are written in a functional and reactive programming concept
-
-    Separate the logic between application data state and template view / user interactions (unidirectional data flow). 
-
-- Use libraries as less as possible,
-
-    If you need to use libraries, we recommend vueJS (or any virtual DOM library), RxJS (or any streams library), Ramda (or any FP library).
-    Other than that, feel free to use other libraries that you're confident of.
-    For moving item inside the canvas, try your best to do it natively.
-
-    _note: use native HTML element `<div>` for editor canvas, not `<canvas>`_
-
-- Code and flow should be properly documented
-
-    Help us understand your flow easier by code comments or a readme file.
-
-- Build automated test for the app
-
-
-## How to Submit
-
-- Zip your working folder with the name `<your name>-piktojstest`
-
-- Exclude `node_modules` folder from the zip
-
-- If you're using github or any code management tools, you can pass us the link
-
-- You have **one day** to complete the test. If you are not able to finish, do send us whatever you have done, we will evaluate accordingly. If you need more time to fulfill all the features and requirements, we can give you **an extra day**
-
-Have fun programming 😊
 
 ## How To Install
 
