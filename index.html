@@ -8,12 +8,15 @@
         .canvas-element {
             position: absolute;
         }
-
         .canvas-element img,
         .canvas-element p {
-            margin: 0;
-            padding: 0;
+            margin: 5px;
+            padding: 5px;
             cursor: move;
+            border: 1px dashed gray;
+        }
+        .canvas .block {
+            overflow: hidden;
         }
     </style>
     <script type="text/javascript" src="https://unpkg.com/vue@latest/dist/vue.min.js"></script>
@@ -24,77 +27,147 @@
                 .substring(2);
         }
 
+        function getElementOffsets(element) {
+            return {
+                width: element.offsetWidth,
+                height: element.offsetHeight,
+                top: element.offsetTop,
+                left: element.offsetLeft,
+                parent: element.offsetParent,
+            };
+        }
+
+        function getSelectorsOffsets(selectors) {
+            const element = document.querySelector(selectors);
+            return getElementOffsets(element);
+        }
+
         const store = {
-            debug: true,
+            debug: false,
             state: {
+                canvasBlockOffset: {
+                    width: 600,
+                    height: 600,
+                    top: null,
+                    left: null,
+                    parent: null,
+                },
                 //Starting canvas elements' z-index from 1000
-                topMostElement: {
+                upperMostElement: {
                     uid: null,
                     zIndex: 999,
                 },
                 canvasElements: {},
             },
-            setTopMostElement(newValue) {
+            setCanvasBlockOffset(newValue) {
                 if (this.debug) {
-                    console.log('setTopMostElement:', 'before update:', this.state.topMostElement);
-                    console.log('setTopMostElement:', 'triggered with:', newValue);
+                    console.log('setCanvasBlockOffset:', 'before update:', JSON.stringify(this.state.canvasBlockOffset));
+                    console.log('setCanvasBlockOffset:', 'triggered with:', JSON.stringify(newValue));
+                }
+                if ((typeof newValue === "object") && (newValue !== null)) {
+                    this.state.canvasBlockOffset = newValue;
+                }
+                if (this.debug) {
+                    console.log('setCanvasBlockOffset:', 'after update:', JSON.stringify(this.state.canvasBlockOffset));
+                }
+            },
+            setUpperMostElement(newValue) {
+                if (this.debug) {
+                    console.log('setUpperMostElement:', 'before update:', JSON.stringify(this.state.upperMostElement));
+                    console.log('setUpperMostElement:', 'triggered with:', JSON.stringify(newValue));
                 }
                 if (Number.isInteger(newValue)) {
-                    this.state.topMostElement = newValue;
+                    this.state.upperMostElement = newValue;
                 }
                 if (this.debug) {
-                    console.log('setTopMostElement:', 'after update:', this.state.topMostElement);
+                    console.log('setUpperMostElement:', 'after update:', JSON.stringify(this.state.upperMostElement));
                 }
             },
             setCanvasElements(newValue) {
                 if (this.debug) {
-                    console.log('canvasElements:', 'before update:', this.state.canvasElements);
-                    console.log('canvasElements:', 'triggered with:', newValue);
+                    console.log('canvasElements:', 'before update:', JSON.stringify(this.state.canvasElements));
+                    console.log('canvasElements:', 'triggered with:', JSON.stringify(newValue));
                 }
                 if ((typeof newValue === "object") && (newValue !== null)) {
                     this.state.canvasElements = newValue;
                 }
                 if (this.debug) {
-                    console.log('canvasElements:', 'after update:', this.state.canvasElements);
+                    console.log('canvasElements:', 'after update:', JSON.stringify(this.state.canvasElements));
                 }
             },
             updateCanvasElement(uid, newValue) {
                 if (this.debug) {
-                    console.log('canvasElements[uid]:', 'before update:', this.state.canvasElements[uid]);
-                    console.log('canvasElements[uid]:', 'triggered with:', uid, newValue);
+                    console.log('canvasElements[uid]:', 'before update:', JSON.stringify(this.state.canvasElements[uid]));
+                    console.log('canvasElements[uid]:', 'triggered with:', JSON.stringify(uid), JSON.stringify(newValue));
                 }
                 if ((typeof newValue === "object") && (newValue !== null)) {
                     for (let key in newValue) {
                         if (!newValue.hasOwnProperty(key)) continue;
-                        console.error(this.state.canvasElements[uid][key], newValue[key])
                         this.state.canvasElements[uid][key] = newValue[key];
                     }
                 }
                 if (this.debug) {
-                    console.log('canvasElements[uid]:', 'after update:', this.state.canvasElements[uid]);
+                    console.log('canvasElements[uid]:', 'after update:', JSON.stringify(this.state.canvasElements[uid]));
                 }
             },
         };
 
         Vue.component('canvas-element', {
-            props: ['element'],
+            props: [
+                'element',
+            ],
+            data: {
+                dragging: false,
+                position: {
+                    x: 0,
+                    y: 0,
+                },
+            },
             methods: {
                 bringElementToFront: function (e) {
-                    console.error(e.currentTarget.id); //anchor, span
                     e.preventDefault();
                     const element = store.state.canvasElements[e.currentTarget.id];
-                    const topMostElement = store.state.topMostElement;
-                    if (topMostElement.uid === e.currentTarget.id) return;
-                    store.setTopMostElement({
+                    const upperMostElement = store.state.upperMostElement;
+                    if (upperMostElement.uid === e.currentTarget.id) return;
+                    store.setUpperMostElement({
                         uid: e.currentTarget.id,
-                        zIndex: topMostElement.zIndex + 1,
+                        zIndex: upperMostElement.zIndex + 1,
                     });
                     store.updateCanvasElement(e.currentTarget.id, {
-                        uid: e.currentTarget.id,
-                        zIndex: topMostElement.zIndex + 1,
+                        zIndex: upperMostElement.zIndex + 1,
                     })
                 },
-                dragMouseDown: function (e) {
+                dragStart: function (e) {
+                    event.preventDefault();
+
+                    this.dragging = true;
+
+                    this.position = {
+                        x: e.clientX,
+                        y: e.clientY,
+                    };
+                },
+                dragContinue: function (e) {
+                    if (this.dragging) {
+                        event.preventDefault();
+
+                        const canvasBlockOffset = store.state.canvasBlockOffset;
+
+                        store.updateCanvasElement(e.currentTarget.id, {
+                            position: {
+                                top: e.currentTarget.offsetTop - (this.position.y - e.clientY),
+                                left: e.currentTarget.offsetLeft - (this.position.x - e.clientX),
+                            },
+                        });
+                        this.position = {
+                            x: e.clientX,
+                            y: e.clientY,
+                        };
+                    }
+                },
+                dragEnd: function (e) {
+                    event.preventDefault();
+                    this.dragging = false;
                 },
 
             },
@@ -102,7 +175,9 @@
                 <div
                 :id="element.uid"
                 v-on:click="bringElementToFront"
-                v-on:mousedown="dragMouseDown"
+                v-on:mousedown="dragStart"
+                v-on:mousemove="dragContinue"
+                v-on:mouseup="dragEnd"
                 v-bind:class="[ 'canvas-element', element.text ? 'text' : 'image' ]"
                 v-bind:style="{ zIndex: element.zIndex, top: element.position.top + 'px', left: element.position.left + 'px' }">
                     <p v-if="element.text">{{ element.text }}</p>
@@ -119,17 +194,16 @@
                     sharedState: store.state,
                 },
                 created: function () {
+                    this.setCanvasBlockOffset();
                     this.getImages();
                     this.getCanvasElements();
                 },
-                watch: {
-                    sharedState: function (val, val2) {
-                        console.error(111, val, val2)
-                    },
-                    deep: true,
-                },
+                watch: {},
                 filters: {},
                 methods: {
+                    setCanvasBlockOffset: function () {
+                        store.setCanvasBlockOffset(getSelectorsOffsets('.canvas .block'));
+                    },
                     getImages: function () {
                         const xhr = new XMLHttpRequest();
                         const self = this;
@@ -164,7 +238,7 @@
                         xhr.send(data);
                     },
                     getCanvasElements: function () {
-                        store.setTopMostElement(JSON.parse(localStorage.getItem('topMostElement')));
+                        store.setUpperMostElement(JSON.parse(localStorage.getItem('upperMostElement')));
                         const canvasElements = Object.keys(localStorage)
                             .reduce((obj, k) => {
                                 if (!k.startsWith('element:')) return obj; // Matching the key signature
@@ -173,8 +247,8 @@
                                 'element:time1-uid1': {
                                     uid: 'element:time1-uid1',
                                     position: {
-                                        left: 100,
                                         top: 0,
+                                        left: 100,
                                     },
                                     zIndex: 1000,
                                     text: 'Hello World',
@@ -182,8 +256,8 @@
                                 'element:time2-uid2': {
                                     uid: 'element:time2-uid2',
                                     position: {
-                                        left: 0,
                                         top: 100,
+                                        left: 0,
                                     },
                                     zIndex: 1001,
                                     src: 'http://localhost:8000/images/uploads-1462948453043.png',
