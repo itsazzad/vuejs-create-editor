@@ -7,6 +7,7 @@
     <style type="text/css">
         .canvas-element {
             position: absolute;
+            cursor: move;
         }
 
         .canvas-element img,
@@ -290,23 +291,33 @@
                             }, []);
                         store.setCanvasElements(canvasElements);
                     },
-                    plotOnTheCanvas: function (e) {
+                    plotOnTheCanvas: function (data) {
                         const upperMostElement = store.state.upperMostElement;
                         const newZIndex = upperMostElement.zIndex + 1;
                         const uid = generateUID();
                         store.addCanvasElement({
-                            uid,
-                            position: {
-                                top: 0,
-                                left: 0,
+                            ...{
+                                uid,
+                                position: {
+                                    top: 0,
+                                    left: 0,
+                                },
+                                zIndex: newZIndex,
                             },
-                            zIndex: newZIndex,
-                            src: e.target.src,
+                            ...data
                         });
                         store.setUpperMostElement({
                             uid,
                             zIndex: newZIndex,
                         });
+                    },
+                    plotTextOnTheCanvas: function () {
+                        const canvasText = document.getElementById('canvas-text');
+                        this.plotOnTheCanvas({text: canvasText.value})
+                        canvasText.value = 'Hello World!';
+                    },
+                    plotImageOnTheCanvas: function (e) {
+                        this.plotOnTheCanvas({src: e.target.src})
                     },
                 }
             })
@@ -328,7 +339,13 @@
             <h3>Assets</h3>
             <div class="text">
                 <h4>Text</h4>
-                <button id="addText" class="btn btn-default">Add Text</button>
+                <textarea class="form-control" id="canvas-text" placeholder="Text">Hello World!</textarea>
+                <button
+                        id="addText"
+                        class="btn btn-default"
+                        v-on:click="plotTextOnTheCanvas">
+                    Add Text
+                </button>
             </div>
             <div class="image">
                 <h4>Images</h4>
@@ -337,7 +354,7 @@
                     <li
                             v-for="image in images"
                             :key="image"
-                            v-on:click="plotOnTheCanvas"
+                            v-on:click="plotImageOnTheCanvas"
                     >
                         <img :src="image" class="img-rounded"/>
                     </li>
