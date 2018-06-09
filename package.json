@@ -1,5 +1,5 @@
 {
-  "name": "vue-create-editor",
+  "name": "vuejs-create-editor",
   "version": "0.0.1",
   "description": "draggable image and text using vue.js",
   "main": "index.js",
