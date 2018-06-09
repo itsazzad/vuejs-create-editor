@@ -21,10 +21,14 @@
         .canvas .block {
             overflow: hidden;
         }
+
+        .assets .image ul li img {
+            cursor: pointer;
+        }
     </style>
     <script type="text/javascript" src="https://unpkg.com/vue@latest/dist/vue.min.js"></script>
     <script type="text/javascript">
-        function uid() {
+        function generateUID() {
             return 'element-' + (+new Date()) + '-' + Math.random()
                 .toString(36)
                 .substring(2);
@@ -79,7 +83,7 @@
                     console.log('setUpperMostElement:', 'before update:', JSON.stringify(this.state.upperMostElement));
                     console.log('setUpperMostElement:', 'triggered with:', JSON.stringify(newValue));
                 }
-                if (Number.isInteger(newValue)) {
+                if ((typeof newValue === "object") && (newValue !== null)) {
                     this.state.upperMostElement = newValue;
                 }
                 if (this.debug) {
@@ -96,6 +100,18 @@
                 }
                 if (this.debug) {
                     console.log('setCanvasElements:', 'after update:', JSON.stringify(this.state.canvasElements));
+                }
+            },
+            addCanvasElement(newValue) {
+                if (this.debug) {
+                    console.log('addCanvasElement:', 'before update:', JSON.stringify(this.state.canvasElements));
+                    console.log('addCanvasElement:', 'triggered with:', JSON.stringify(newValue));
+                }
+                if ((typeof newValue === "object") && (newValue !== null)) {
+                    this.state.canvasElements.splice(0, 0, newValue);
+                }
+                if (this.debug) {
+                    console.log('addCanvasElement:', 'after update:', JSON.stringify(this.state.canvasElements));
                 }
             },
             updateCanvasElement(key, newValue) {
@@ -187,6 +203,7 @@
                 <div
                 :id="element.uid"
                 v-on:click.prevent="bringElementToFront"
+                v-on:mousedown.prevent="bringElementToFront"
                 v-on:mousedown.prevent="dragStart"
                 v-on:mousemove.prevent="dragContinue"
                 v-on:mouseup.prevent="dragEnd"
@@ -270,27 +287,26 @@
                             .reduce((obj, k) => {
                                 if (!k.startsWith('element-')) return obj; // Matching the key signature
                                 return {...obj, [k]: JSON.parse(localStorage.getItem(k))}
-                            }, [
-                                {
-                                    uid: 'element-time1-uid1',
-                                    position: {
-                                        top: 0,
-                                        left: 100,
-                                    },
-                                    zIndex: 1000,
-                                    text: 'Hello World',
-                                },
-                                {
-                                    uid: 'element-time2-uid2',
-                                    position: {
-                                        top: 100,
-                                        left: 0,
-                                    },
-                                    zIndex: 1001,
-                                    src: 'http://localhost:8000/images/uploads-1462948453043.png',
-                                },
-                            ]);
+                            }, []);
                         store.setCanvasElements(canvasElements);
+                    },
+                    plotOnTheCanvas: function (e) {
+                        const upperMostElement = store.state.upperMostElement;
+                        const newZIndex = upperMostElement.zIndex + 1;
+                        const uid = generateUID();
+                        store.addCanvasElement({
+                            uid,
+                            position: {
+                                top: 0,
+                                left: 0,
+                            },
+                            zIndex: newZIndex,
+                            src: e.target.src,
+                        });
+                        store.setUpperMostElement({
+                            uid,
+                            zIndex: newZIndex,
+                        });
                     },
                 }
             })
@@ -318,7 +334,13 @@
                 <h4>Images</h4>
                 <ul class="list-unstyled">
                     <!-- List of images here -->
-                    <li v-for="image in images" :key="image"><img :src="image" class="img-rounded"/></li>
+                    <li
+                            v-for="image in images"
+                            :key="image"
+                            v-on:click="plotOnTheCanvas"
+                    >
+                        <img :src="image" class="img-rounded"/>
+                    </li>
                 </ul>
             </div>
         </div>
