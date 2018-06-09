@@ -35,31 +35,9 @@
                 .substring(2);
         }
 
-        function getElementOffsets(element) {
-            return {
-                width: element.offsetWidth,
-                height: element.offsetHeight,
-                top: element.offsetTop,
-                left: element.offsetLeft,
-                parent: element.offsetParent,
-            };
-        }
-
-        function getSelectorsOffsets(selectors) {
-            const element = document.querySelector(selectors);
-            return getElementOffsets(element);
-        }
-
         const store = {
-            debug: false,
+            debug: true,
             state: {
-                canvasBlockOffset: {
-                    width: 600,
-                    height: 600,
-                    top: null,
-                    left: null,
-                    parent: null,
-                },
                 //Starting canvas elements' z-index from 1000
                 upperMostElement: {
                     uid: null,
@@ -67,25 +45,14 @@
                 },
                 canvasElements: [],
             },
-            setCanvasBlockOffset(newValue) {
-                if (this.debug) {
-                    console.log('setCanvasBlockOffset:', 'before update:', JSON.stringify(this.state.canvasBlockOffset));
-                    console.log('setCanvasBlockOffset:', 'triggered with:', JSON.stringify(newValue));
-                }
-                if ((typeof newValue === "object") && (newValue !== null)) {
-                    this.state.canvasBlockOffset = newValue;
-                }
-                if (this.debug) {
-                    console.log('setCanvasBlockOffset:', 'after update:', JSON.stringify(this.state.canvasBlockOffset));
-                }
-            },
-            setUpperMostElement(newValue) {
+            setUpperMostElement(newValue, persist) {
                 if (this.debug) {
                     console.log('setUpperMostElement:', 'before update:', JSON.stringify(this.state.upperMostElement));
                     console.log('setUpperMostElement:', 'triggered with:', JSON.stringify(newValue));
                 }
                 if ((typeof newValue === "object") && (newValue !== null)) {
                     this.state.upperMostElement = newValue;
+                    persist && localStorage.setItem('upperMostElement', JSON.stringify(newValue));
                 }
                 if (this.debug) {
                     console.log('setUpperMostElement:', 'after update:', JSON.stringify(this.state.upperMostElement));
@@ -110,6 +77,7 @@
                 }
                 if ((typeof newValue === "object") && (newValue !== null)) {
                     this.state.canvasElements.splice(0, 0, newValue);
+                    localStorage.setItem(newValue.uid, JSON.stringify(newValue));
                 }
                 if (this.debug) {
                     console.log('addCanvasElement:', 'after update:', JSON.stringify(this.state.canvasElements));
@@ -128,6 +96,8 @@
                         value[key] = newValue[key];
                     }
                     this.state.canvasElements.splice(indexOfItem, 1, value); // Update
+                    localStorage.setItem(value.uid, JSON.stringify(value));
+
                     if (this.debug)
                         console.log('updateCanvasElement:', 'after update:', JSON.stringify(this.state.canvasElements[indexOfItem]));
                 }
@@ -139,6 +109,7 @@
                 }
                 const indexOfItem = this.state.canvasElements.findIndex((element) => element.uid === key);
                 this.state.canvasElements.splice(indexOfItem, 1); // Delete
+                localStorage.removeItem(key);
                 if (this.debug) {
                     console.log('deleteCanvasElement:', 'after update:', JSON.stringify(this.state.canvasElements[key]));
                 }
@@ -169,7 +140,7 @@
                     store.setUpperMostElement({
                         uid: e.currentTarget.id,
                         zIndex: upperMostElement.zIndex + 1,
-                    });
+                    }, true);
                     store.updateCanvasElement(e.currentTarget.id, {
                         zIndex: upperMostElement.zIndex + 1,
                     })
@@ -232,23 +203,10 @@
                     sharedState: store.state,
                 },
                 created: function () {
-                    this.setCanvasBlockOffset();
                     this.getImages();
-                    this.getCanvasElements();
+                    this.getCanvasElementsFromLocalStorage();
                 },
-                watch: {
-                    sharedState: {
-                        handler: function (newValue) {
-                            // console.error(newValue)
-                        },
-                        deep: true
-                    }
-                },
-                filters: {},
                 methods: {
-                    setCanvasBlockOffset: function () {
-                        store.setCanvasBlockOffset(getSelectorsOffsets('.canvas .block'));
-                    },
                     getImages: function () {
                         const xhr = new XMLHttpRequest();
                         const self = this;
@@ -282,12 +240,13 @@
                         };
                         xhr.send(data);
                     },
-                    getCanvasElements: function () {
+                    getCanvasElementsFromLocalStorage: function () {
                         store.setUpperMostElement(JSON.parse(localStorage.getItem('upperMostElement')));
                         const canvasElements = Object.keys(localStorage)
-                            .reduce((obj, k) => {
-                                if (!k.startsWith('element-')) return obj; // Matching the key signature
-                                return {...obj, [k]: JSON.parse(localStorage.getItem(k))}
+                            .reduce((arr, k) => {
+                                if (!k.startsWith('element-')) return arr; // Matching the key signature
+                                arr.splice(0, 0, JSON.parse(localStorage.getItem(k)));
+                                return arr;
                             }, []);
                         store.setCanvasElements(canvasElements);
                     },
@@ -309,11 +268,11 @@
                         store.setUpperMostElement({
                             uid,
                             zIndex: newZIndex,
-                        });
+                        }, true);
                     },
                     plotTextOnTheCanvas: function () {
                         const canvasText = document.getElementById('canvas-text');
-                        this.plotOnTheCanvas({text: canvasText.value})
+                        this.plotOnTheCanvas({text: canvasText.value});
                         canvasText.value = 'Hello World!';
                     },
                     plotImageOnTheCanvas: function (e) {
