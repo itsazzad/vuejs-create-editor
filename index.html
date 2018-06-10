@@ -37,7 +37,7 @@
 
         //Simple State Management
         const store = {
-            debug: true,
+            debug: false,
             state: {
                 //Starting canvas elements' z-index from 1000
                 upperMostElement: {
@@ -84,7 +84,7 @@
                     console.log('addCanvasElement:', 'after update:', JSON.stringify(this.state.canvasElements));
                 }
             },
-            updateCanvasElement(key, newValue) { // Updating element properties
+            updateCanvasElement(key, newValue, persist) { // Updating element properties
                 if (this.debug)
                     console.log('updateCanvasElement:', 'triggered with:', JSON.stringify(key), JSON.stringify(newValue));
                 if ((typeof newValue === "object") && (newValue !== null)) {
@@ -97,7 +97,8 @@
                         value[key] = newValue[key];
                     }
                     this.state.canvasElements.splice(indexOfItem, 1, value); // Update
-                    localStorage.setItem(value.uid, JSON.stringify(value));
+                    if (persist)
+                        localStorage.setItem(value.uid, JSON.stringify(value));
 
                     if (this.debug)
                         console.log('updateCanvasElement:', 'after update:', JSON.stringify(this.state.canvasElements[indexOfItem]));
@@ -170,6 +171,14 @@
                     }
                 },
                 dragEnd: function (e) { // Mouse up means done
+                    if (this.dragging) { // Only when dragging
+                        store.updateCanvasElement(e.currentTarget.id, {
+                            position: {
+                                top: e.currentTarget.offsetTop - (this.position.y - e.clientY),
+                                left: e.currentTarget.offsetLeft - (this.position.x - e.clientX),
+                            },
+                        }, true);
+                    }
                     this.dragging = false;
                 },
             },

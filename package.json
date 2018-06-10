@@ -12,7 +12,8 @@
     "express": "^4.13.4",
     "junk": "^1.0.2",
     "multer": "^1.1.0",
-    "nodemon": "^1.9.1"
+    "nodemon": "^1.9.1",
+    "puppeteer": "^1.5.0"
   },
   "devDependencies": {}
 }
